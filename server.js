@@ -91,6 +91,7 @@ app.use("/api/Chart", require("./routes/ChartRoutes"));
 
 
 app.get("/", (req, res) => res.send(`✅ Server running in ${process.env.NODE_ENV} mode!`));
+app.use('/api/inventory', require('./routes/inventoryRoutes'));
 
 //  Cron job (Twilio WhatsApp)
 require("./services/sendWhatsAppBills");
