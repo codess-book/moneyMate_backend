@@ -1,18 +1,18 @@
 const express = require("express");
 const {
   getAllItems,
-  addOrUpdateItem,
+  addItem,
   updateItem,
   deleteItem,
-  getSupplierHistoryByInventoryId
+  getSupplierHistory
 } = require("../controllers/inventoryController");
 
 const router = express.Router();
 
-router.get("/", getAllItems);
-router.post("/", addOrUpdateItem);
+router.get("/allItems", getAllItems);
+router.post("/", addItem);
 router.put("/:id", updateItem);
 router.delete("/:id", deleteItem);
-router.get("/supplier-history/:itemId", getSupplierHistoryByInventoryId);
+router.get("/supplier-history/:itemId", getSupplierHistory);
 
 module.exports = router;
