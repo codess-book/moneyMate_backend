@@ -2,7 +2,7 @@ const Customer = require("../models/Customer");
 const { sendWhatsAppMessage } = require("../services/whatsappService");
 const WhatsAppLog = require("../models/WhatsAppLog");
 const Payment = require("../models/payment"); // Import this at the top
-
+const deductStock = require("../services/inventoryService");
 //ye purana hai..
 
 exports.buildWhatsAppMessage = function (
@@ -102,8 +102,6 @@ exports.addCustomer = async (req, res) => {
       };
     });
 
-  
-
     const subTotal =
       Math.round(
         enrichedItems.reduce((sum, item) => sum + item.taxableAmount, 0) * 100
@@ -147,7 +145,6 @@ exports.addCustomer = async (req, res) => {
         ).getDate()
       )
     );
-  
 
     const finalNextPaymentDate =
       dueAmount > 0
@@ -227,6 +224,7 @@ exports.addCustomer = async (req, res) => {
         dueAmount === 0 ? "paid" : numericPaidAmount > 0 ? "partial" : "due",
       items: enrichedItems,
     });
+    // await deductStock(enrichedItems);
 
     return res.status(201).json({
       message: "Customer added successfully",

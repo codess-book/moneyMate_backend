@@ -42,7 +42,7 @@ const itemSchema = new mongoose.Schema(
     price: { type: Number, required: true }, // selling price
     currentStock: { type: Number, default: 0 },
 
-    lowStockAlert: { type: Number, default: 5 },
+    lowStockAlert: { type: Number, default: 0},
 
     status: {
       type: String,

@@ -1,7 +1,7 @@
 const Inventory = require("../models/Inventory");
 const Item = require("../models/Item");
 
-// 📦 Get all inventory items
+//  Get all inventory items
 exports.getAllItems = async (req, res) => {
   console.log("idr")
   try {
@@ -183,7 +183,7 @@ exports.updateItem = async (req, res) => {
 
 
 
-// ❌ Delete item
+//  Delete item
 exports.deleteItem = async (req, res) => {
   try {
     const { id } = req.params;

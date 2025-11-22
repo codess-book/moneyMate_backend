@@ -1,15 +1,28 @@
-const Inventory = require("../models/Inventory");
+const Item = require("../models/Item");
 
 exports.deductStock = async (items) => {
-  for (let cartItem of items) {
-    const inv = await Inventory.findOne({ item: cartItem.itemId });
+  for (const item of items) {
+    const inv = await Item.findById(item.itemId);
 
-    if (!inv) throw new Error(`Item not found: ${cartItem.name}`);
+    if (!inv) {
+      throw new Error(`Item not found: ${item.name}`);
+    }
 
-    if (inv.quantity < cartItem.quantity)
-      throw new Error(`Low stock: ${cartItem.name}`);
+    const requiredQty = Number(item.quantity);
+    const availableQty = Number(inv.currentStock);
 
-    inv.quantity -= cartItem.quantity;
+    if (availableQty < requiredQty) {
+      throw new Error(
+        `Low stock for ${inv.name}. Available: ${availableQty}, Required: ${requiredQty}`
+      );
+    }
+
+    inv.currentStock = availableQty - requiredQty;
     await inv.save();
+
+    if (inv.currentStock <= inv.lowStockAlert) {
+      console.log(`⚠️ Low stock alert for ${inv.name}`);
+      // here you can send WhatsApp or email
+    }
   }
 };

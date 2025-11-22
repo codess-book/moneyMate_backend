@@ -86,7 +86,8 @@ app.use("/api/payment", require("./routes/paymentRoutes"));
 app.use("/api/dashboard", require("./routes/dashboardRoutes"));
 app.use("/api/admin", require("./routes/adminRoutes"));
 app.use("/api/export", require("./routes/exportRoutes"));
-app.use("/api", require("./routes/itemRoutes"));
+app.use("/api/items", require("./routes/itemRoutes"));
+
 app.use("/api/Chart", require("./routes/ChartRoutes"));
 app.use("/api/ledger",require("./routes/ledgerRoutes"));
 
