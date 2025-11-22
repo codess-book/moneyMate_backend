@@ -4,7 +4,8 @@ const {
   addItem,
   updateItem,
   deleteItem,
-  getSupplierHistory
+  getSupplierHistory,
+  getSupplierByPhone
 } = require("../controllers/inventoryController");
 
 const router = express.Router();
@@ -14,5 +15,8 @@ router.post("/", addItem);
 router.put("/:id", updateItem);
 router.delete("/:id", deleteItem);
 router.get("/supplier-history/:itemId", getSupplierHistory);
-
+router.get(
+  "/item/:itemId/supplier/:phone",
+  getSupplierByPhone
+);
 module.exports = router;

@@ -3,6 +3,7 @@ const Item = require("../models/Item");
 
 // 📦 Get all inventory items
 exports.getAllItems = async (req, res) => {
+  console.log("idr")
   try {
     let {
       page = 1,
@@ -73,12 +74,11 @@ exports.getAllItems = async (req, res) => {
     res.status(500).json({ message: "Error fetching items", error });
   }
 };
-
+   
 exports.addItem = async (req, res) => {
   try {
-    const { name, category, price, unit, stock, lowStockAlert, supplier } = req.body;
+    const { name, category, price, unit, quantity, lowStockAlert, supplier } = req.body;
 
-    // 1️⃣ Check if item already exists → deny (update is a separate API)
     const existingItem = await Item.findOne({ name });
     if (existingItem) {
       return res.status(400).json({
@@ -86,26 +86,28 @@ exports.addItem = async (req, res) => {
       });
     }
 
-    // 2️⃣ Create new supplier history entry (only if supplier is provided)
-    const supplierEntry = supplier?.name
-      ? {
+    console.log(supplier,"supller")
+
+    const supplierData = supplier?.name
+      ? [{
           supplierName: supplier.name,
           supplierPhone: supplier.phone,
           supplierAddress: supplier.address,
-          boughtPrice: supplier.boughtPrice,
-          quantityAdded: stock
-        }
-      : null;
+          purchaseHistory: [{
+            boughtPrice: supplier.boughtPrice,
+            quantityAdded: quantity,
+          }]
+        }]
+      : [];
 
-    // 3️⃣ Create item
     const newItem = await Item.create({
       name,
       category,
       price,
       unit,
-      currentStock: stock,
+      currentStock: quantity,
       lowStockAlert,
-      supplierHistory: supplierEntry ? [supplierEntry] : []
+      suppliers: supplierData
     });
 
     return res.status(201).json({
@@ -119,57 +121,6 @@ exports.addItem = async (req, res) => {
   }
 };
 
-// exports.addOrUpdateItem = async (req, res) => {
-//   try {
-//     const { name, category, price, unit, stock, lowStockAlert, supplier } = req.body;
-
-//     let item = await Item.findOne({ name });
-
-//     if (!item) {
-//       // New item create
-//       item = await Item.create({
-//         name,
-//         category,
-//         price,
-//         unit,
-//         currentStock: stock,
-//         lowStockAlert,
-//         supplierHistory: supplier?.name ? [{
-//           supplierName: supplier.name,
-//           supplierPhone: supplier.phone,
-//           supplierAddress: supplier.address,
-//           boughtPrice: supplier.boughtPrice,
-//           quantityAdded: stock,
-//         }] : []
-//       });
-
-//     } else {
-//       // Existing item update
-//       item.currentStock += stock;
-//       item.price = price;
-//       item.unit = unit;
-//       if (lowStockAlert) item.lowStockAlert = lowStockAlert;
-
-//       if (supplier?.name) {
-//         item.supplierHistory.push({
-//           supplierName: supplier.name,
-//           supplierPhone: supplier.phone,
-//           supplierAddress: supplier.address,
-//           boughtPrice: supplier.boughtPrice,
-//           quantityAdded: stock,
-//         });
-//       }
-
-//       await item.save();
-//     }
-
-//     res.status(201).json(item);
-
-//   } catch (error) {
-//     console.error(error);
-//     res.status(400).json({ message: "Error adding/updating item", error });
-//   }
-// };
 
 exports.updateItem = async (req, res) => {
   try {
@@ -182,25 +133,42 @@ exports.updateItem = async (req, res) => {
     // Basic field updates
     if (updates.price !== undefined) item.price = updates.price;
     if (updates.status !== undefined) item.status = updates.status;
-    if (updates.lowStockAlert !== undefined) item.lowStockAlert = updates.lowStockAlert;
+    if (updates.stockAlert !== undefined) item.lowStockAlert = updates.stockAlert;
 
-    // Supplier update only if stock is added
-    if (
-      updates.supplier?.name &&
-      updates.supplier?.quantityAdded &&
-      updates.supplier.quantityAdded > 0
-    ) {
-      // increase stock
-      item.currentStock += updates.supplier.quantityAdded;
+    const supplier = updates.supplier;
 
-      // push supplier entry
-      item.supplierHistory.push({
-        supplierName: updates.supplier.name,
-        supplierPhone: updates.supplier.phone,
-        supplierAddress: updates.supplier.address,
-        boughtPrice: updates.supplier.boughtPrice,
-        quantityAdded: updates.supplier.quantityAdded
-      });
+    if (supplier?.phone && supplier?.quantityAdded > 0) {
+      item.currentStock += supplier.quantityAdded;
+
+      // 1️⃣ Find existing supplier by phone
+      const existingSupplier = item.suppliers.find(
+        (s) => s.supplierPhone === supplier.phone
+      );
+
+      if (existingSupplier) {
+        // 2️⃣ Update supplier profile
+        existingSupplier.supplierName = supplier.name || existingSupplier.supplierName;
+        existingSupplier.supplierPhone = supplier.phone || existingSupplier.supplierPhone;
+        existingSupplier.supplierAddress = supplier.address || existingSupplier.supplierAddress;
+
+        // 3️⃣ Push new purchase record
+        existingSupplier.purchaseHistory.push({
+          boughtPrice: supplier.boughtPrice,
+          quantityAdded: supplier.quantityAdded
+        });
+
+      } else {
+        // 4️⃣ Add new supplier if not present
+        item.suppliers.push({
+          supplierName: supplier.name,
+          supplierPhone: supplier.phone,
+          supplierAddress: supplier.address,
+          purchaseHistory: [{
+            boughtPrice: supplier.boughtPrice,
+            quantityAdded: supplier.quantityAdded
+          }]
+        });
+      }
     }
 
     await item.save();
@@ -243,3 +211,39 @@ exports.getSupplierHistory = async (req, res) => {
     res.status(500).json({ message: "Error fetching supplier history", error });
   }
 };
+
+
+
+// GET SUPPLIER HISTORY OF A SPECIFIC ITEM BY PHONE NUMBER
+exports.getSupplierByPhone = async (req, res) => {
+  try {
+    const { itemId, phone } = req.params;
+
+    const item = await Item.findById(itemId);
+
+    if (!item) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    // Find supplier having the phone number
+    const supplier = item.suppliers.find(
+      (s) => s.supplierPhone === phone
+    );
+
+    if (!supplier) {
+      return res.status(404).json({
+        message: "No supplier found with this phone for this item",
+      });
+    }
+
+    res.json({
+      itemName: item.name,
+      phone,
+      supplier,
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
