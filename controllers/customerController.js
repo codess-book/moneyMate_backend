@@ -52,106 +52,6 @@ ${header}${itemRows}
 `;
 };
 
-//ye nya hai
-
-//ye purana haii..
-
-// exports.addCustomer = async (req, res) => {
-//   try {
-//     const { name, phone, address, paidAmount, nextPaymentDate, items } =
-//       req.body;
-
-//     const enrichedItems = items.map((item) => ({
-//       ...item,
-//       totalPrice: item.quantity * item.pricePerUnit,
-//     }));
-
-//      const gstprice=totalprice * gst/100;
-//      const inlineamount=gstprice+totalAmount;
-//     const totalAmount = enrichedItems.reduce(
-//       (acc, item) => acc + item.inlineamount
-//       ,
-//       0
-//     );
-//     const remainingAmount = inlineamount - paidAmount;
-
-//     if (remainingAmount < 0) {
-//       return res
-//         .status(400)
-//         .json({ message: "Paid amount cannot exceed total amount" });
-//     }
-//     //if date is not send from frontend..
-//     const fallbackNextDate = new Date(req.body.paymentDate || new Date());
-//     fallbackNextDate.setMonth(fallbackNextDate.getMonth() + 1);
-
-//     const finalNextPaymentDate =
-//       remainingAmount > 0 ? nextPaymentDate || fallbackNextDate : null;
-
-//     let customer = await Customer.findOne({ phone });
-
-//     if (customer) {
-//       customer.totalAmount += totalAmount;
-//       customer.paidAmount += paidAmount;
-//       customer.remainingAmount = customer.totalAmount - customer.paidAmount;
-//       customer.nextPaymentDate =
-//         customer.remainingAmount > 0 ? nextPaymentDate : null;
-//       customer.isSent = false;
-//       await customer.save();
-
-//       await Payment.create({
-//         userId: customer._id,
-//         totalAmount,
-//         amountPaid: paidAmount,
-//         paymentDate: req.body.paymentDate
-//           ? new Date(req.body.paymentDate)
-//           : new Date(), //isse ye ho rha hai kya agar customer payment dega
-//         nextPaymentDate,
-//         status: customer.remainingAmount === 0 ? "paid" : "due",
-//         items: enrichedItems,
-//       });
-
-//       return res
-//         .status(200)
-//         .json({ message: "Existing customer updated successfully", customer });
-//     }
-
-//     const newCustomer = await Customer.create({
-//       name,
-//       phone,
-//       address,
-//       totalAmount,
-//       paidAmount,
-//       remainingAmount,
-//       nextPaymentDate:
-//         remainingAmount > 0
-//           ? nextPaymentDate ||
-//             new Date(new Date().setMonth(new Date().getMonth() + 1))
-//           : null,
-//       isSent: false,
-//     });
-
-//     await Payment.create({
-//       userId: newCustomer._id,
-//       totalAmount,
-//       amountPaid: paidAmount,
-//       paymentDate: new Date(),
-//       nextPaymentDate: remainingAmount > 0 ? nextPaymentDate : null,
-//       status: remainingAmount === 0 ? "paid" : "due",
-//       items: enrichedItems,
-//     });
-
-//     newCustomer.isSent = false;
-//     await newCustomer.save();
-
-//     return res
-//       .status(201)
-//       .json({ message: "Customer added successfully", customer: newCustomer });
-//   } catch (err) {
-//     console.error("❌ Error in addCustomer:", err);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// };
-
 exports.addCustomer = async (req, res) => {
   try {
     const {
@@ -171,9 +71,7 @@ exports.addCustomer = async (req, res) => {
       return res.status(400).json({ message: "Name and phone are required" });
     }
 
-    // ----------------------------
-    // 1️⃣ ENRICH ITEMS WITH GST LOGIC
-    // ----------------------------
+    // gst logic
     const enrichedItems = items.map((item) => {
       const quantity = Number(item.quantity);
       const pricePerUnit = Number(item.pricePerUnit);
@@ -186,10 +84,6 @@ exports.addCustomer = async (req, res) => {
       if (gstRate < 0 || gstRate > 100) {
         throw new Error("GST rate must be between 0 and 100");
       }
-
-      // const taxableAmount = quantity * pricePerUnit;
-      // const gstAmount = gstRate > 0 ? (taxableAmount * gstRate) / 100 : 0;
-      // const totalAmount = taxableAmount + gstAmount;
 
       const taxableAmount = Math.round(quantity * pricePerUnit * 100) / 100;
       const gstAmount =
@@ -208,18 +102,7 @@ exports.addCustomer = async (req, res) => {
       };
     });
 
-    // ----------------------------
-    // 2️⃣ CALCULATE TOTALS
-    // ----------------------------
-    // const subTotal = enrichedItems.reduce(
-    //   (sum, item) => sum + item.taxableAmount,
-    //   0
-    // // );
-    // const totalGST = enrichedItems.reduce(
-    //   (sum, item) => sum + item.gstAmount,
-    //   0
-    // );
-    // const grandTotal = subTotal + totalGST;
+  
 
     const subTotal =
       Math.round(
@@ -246,19 +129,6 @@ exports.addCustomer = async (req, res) => {
         .json({ message: "Paid amount cannot exceed total invoice amount" });
     }
 
-    // Paid amount validation
-    // if (paidAmount < 0) {
-    //   return res
-    //     .status(400)
-    //     .json({ message: "Paid amount cannot be negative" });
-    // }
-    // if (paidAmount > grandTotal) {
-    //   return res
-    //     .status(400)
-    //     .json({ message: "Paid amount cannot exceed total invoice amount" });
-    // }
-
-    // const dueAmount = grandTotal - paidAmount;
     const dueAmount = Math.round((grandTotal - numericPaidAmount) * 100) / 100;
 
     const baseDate = paymentDate ? new Date(paymentDate) : new Date();
@@ -277,12 +147,7 @@ exports.addCustomer = async (req, res) => {
         ).getDate()
       )
     );
-    // // Auto next date
-    // const fallbackDate = new Date(paymentDate || new Date());
-    // fallbackDate.setMonth(fallbackDate.getMonth() + 1);
-
-    // const finalNextPaymentDate =
-    //   dueAmount > 0 ? nextPaymentDate || fallbackDate : null;
+  
 
     const finalNextPaymentDate =
       dueAmount > 0
@@ -291,9 +156,7 @@ exports.addCustomer = async (req, res) => {
           : fallbackDate
         : null;
 
-    // ----------------------------
-    // 3️⃣ FIND IF CUSTOMER ALREADY EXISTS
-    // ----------------------------
+    // if customer already exist
     let customer = await Customer.findOne({ phone });
 
     if (customer) {
@@ -338,9 +201,7 @@ exports.addCustomer = async (req, res) => {
       });
     }
 
-    // ----------------------------
-    // 4️⃣ CREATE NEW CUSTOMER
-    // ----------------------------
+    // create new customer
     const newCustomer = await Customer.create({
       name,
       phone,

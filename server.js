@@ -88,7 +88,7 @@ app.use("/api/admin", require("./routes/adminRoutes"));
 app.use("/api/export", require("./routes/exportRoutes"));
 app.use("/api", require("./routes/itemRoutes"));
 app.use("/api/Chart", require("./routes/ChartRoutes"));
-
+app.use("/api/ledger",require("./routes/ledgerRoutes"));
 
 app.get("/", (req, res) => res.send(`✅ Server running in ${process.env.NODE_ENV} mode!`));
 app.use('/api/inventory', require('./routes/inventoryRoutes'));

@@ -1,9 +1,4 @@
-// const mongoose=require('mongoose');
-// const itemSchema = new mongoose.Schema({
-//   name: { type: String, required: true, unique: true, trim: true }
-// }, { timestamps: true });
 
-// module.exports=mongoose.model("Item",itemSchema);
 
 const mongoose = require("mongoose");
 
@@ -22,7 +17,7 @@ const itemSchema = new mongoose.Schema({
   category: {
     type: String,
     enum: ["Pesticides", "Fertilizers", "Cattle Feed", "Seeds", "Others"],
-    required: true,
+    
   },
 
   unit: { type: String, default: "kg" }, 
