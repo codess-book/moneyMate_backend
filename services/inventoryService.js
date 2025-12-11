@@ -1,6 +1,7 @@
 const Item = require("../models/Item");
 
 exports.deductStock = async (items) => {
+  console.log(items,"items")
   for (const item of items) {
     const inv = await Item.findById(item.itemId);
 
