@@ -28,6 +28,7 @@ exports.exportAllCustomers = async (req, res) => {
 };
 
 
+
 exports.exportCustomerHistory = async (req, res) => {
   try {
     const customerId = req.params.id;
@@ -39,28 +40,32 @@ exports.exportCustomerHistory = async (req, res) => {
 
     const data = [];
 
-    let grandPaid = 0;
-    let grandRemaining = customer.totalAmount;
+    // let grandPaid = 0;
+    // let grandRemaining = customer.totalAmount;
 
     for (const payment of payments) {
       const items = payment.items;
       const todayTotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
 
-      grandPaid += payment.amountPaid;
-      grandRemaining -= payment.amountPaid;
+      // grandPaid += payment.amountPaid;
+      // grandRemaining -= payment.amountPaid;
 
       items.forEach((item, index) => {
         data.push({
           date: payment.paymentDate.toLocaleDateString("hi-IN"),
           itemName: item.name,
           quantity: item.quantity,
+          category:item.category,
           rate: `₹${item.pricePerUnit}`,
-          total: `₹${item.totalPrice}`,
+          Subtotal: `₹${item.taxableAmount}`,
+           gstRate: `₹${item.gstRate}`,
+          totalAmount: `₹${item.totalAmount}`,
           todayTotal: index === 0 ? `₹${todayTotal}` : "",
           paidToday: index === 0 ? `₹${payment.amountPaid}` : "",
-          remaining: index === 0 ? `₹${grandRemaining}` : "",
-          grandPaid: index === 0 ? `₹${grandPaid}` : "",
-          grandRemaining: index === 0 ? `₹${grandRemaining}` : "",
+          remaining: index === 0 ? `₹${payment.dueAmount}` : "",
+          
+          // grandPaid: index === 0 ? `₹${grandPaid}` : "",
+          // grandRemaining: index === 0 ? `₹${grandRemaining}` : "",
         });
       });
     }
@@ -70,13 +75,17 @@ exports.exportCustomerHistory = async (req, res) => {
         date: "-",
         itemName: "No transactions yet",
         quantity: "",
+        // category:"",
         rate: "",
-        total: "",
-        todayTotal: "",
+       taxableAmount:"",
+        gstRate:"",
+       
+        totalAmount:"",
+        // todayTotal: "",
         paidToday: "",
         remaining: `₹${customer.totalAmount}`,
-        grandPaid: "₹0",
-        grandRemaining: `₹${customer.totalAmount}`,
+        // grandPaid: "₹0",
+        // grandRemaining: `₹${customer.totalAmount}`,
       });
     }
 
@@ -87,13 +96,16 @@ exports.exportCustomerHistory = async (req, res) => {
       { header: "Date", key: "date", width: 15 },
       { header: "Item Name", key: "itemName", width: 20 },
       { header: "Qty", key: "quantity", width: 8 },
+      // { header: "Category", key: "category", width: 12 },
       { header: "Rate", key: "rate", width: 10 },
-      { header: "Total", key: "total", width: 12 },
-      { header: "Today Total", key: "todayTotal", width: 15 },
+      { header: "TaxableAmont", key: "taxableAmount", width: 15 }, 
+      { header: "gstRate", key: "gstRate", width: 12 },
+        { header: "TotalAmount", key: "totalAmount", width: 15 },
+    
       { header: "Paid Today", key: "paidToday", width: 15 },
       { header: "Remaining", key: "remaining", width: 15 },
-      { header: "Grand Paid", key: "grandPaid", width: 15 },
-      { header: "Grand Remaining", key: "grandRemaining", width: 18 },
+      // { header: "Grand Paid", key: "grandPaid", width: 15 },
+      // { header: "Grand Remaining", key: "grandRemaining", width: 18 },
     ];
 
     data.forEach(row => sheet.addRow(row));
