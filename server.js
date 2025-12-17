@@ -82,6 +82,7 @@ app.use(
 
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/customers", require("./routes/customerRoutes"));
+app.use("/api/invoice", require("./routes/invoice"));
 app.use("/api/payment", require("./routes/paymentRoutes"));
 app.use("/api/dashboard", require("./routes/dashboardRoutes"));
 app.use("/api/admin", require("./routes/adminRoutes"));
@@ -93,6 +94,7 @@ app.use("/api/ledger",require("./routes/ledgerRoutes"));
 
 app.get("/", (req, res) => res.send(`✅ Server running in ${process.env.NODE_ENV} mode!`));
 app.use('/api/inventory', require('./routes/inventoryRoutes'));
+
 
 //  Cron job (Twilio WhatsApp)
 require("./services/sendWhatsAppBills");

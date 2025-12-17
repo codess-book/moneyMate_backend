@@ -2,8 +2,10 @@ const Inventory = require("../models/Inventory");
 const Item = require("../models/Item");
 
 //  Get all inventory items
+
+
 exports.getAllItems = async (req, res) => {
-  console.log("idr")
+  // console.log("idr")
   try {
     let {
       page = 1,

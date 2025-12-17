@@ -1,12 +1,8 @@
-
-
 const cron = require("node-cron");
 const Customer = require("../models/Customer");
 const Payment = require("../models/payment");
 const { sendWhatsAppMessage } = require("../services/whatsappService");
 const { buildWhatsAppMessage } = require("../controllers/customerController");
-
-
 
 ////purana bill
 
@@ -83,12 +79,13 @@ const { buildWhatsAppMessage } = require("../controllers/customerController");
 //  }
 //});
 
-
-
-
 //cron.schedule("* * * * *", async () => {
-  //cron.schedule("* 23 * * *", async () => {
-    cron.schedule("0 23 * * *", async () => {
+//cron.schedule("* 23 * * *", async () => {
+
+
+// isko abhi hum bad mai use krega..
+
+cron.schedule("0 23 * * *", async () => {
   try {
     const customersToSend = await Customer.find({ isSent: false });
 
@@ -100,99 +97,58 @@ const { buildWhatsAppMessage } = require("../controllers/customerController");
       todayEnd.setHours(23, 59, 59, 999);
 
       // 🧾 Get all payments for this customer (sorted by createdAt)
-      const allPayments = await Payment.find({ userId: customer._id }).sort({ createdAt: 1 });
+      const allPayments = await Payment.find({ userId: customer._id }).sort({
+        createdAt: 1,
+      });
 
       if (allPayments.length === 0) continue;
 
       let runningTotalBilled = 0;
       let runningTotalPaid = 0;
-      // console.log(allPayments,"allPayments") 
-      //for (const payment of allPayments) {
-      //  const isTodayUnsentBill =
-      //    payment.createdAt >= todayStart &&
-      //    payment.createdAt <= todayEnd &&
-      //    payment.billStatus !== 'sent' &&
-      //    payment.items && payment.items.length > 0;
 
-      //  const currentDue = payment.totalAmount - payment.amountPaid;
-      //  const previousDue = Math.max(0, runningTotalBilled - runningTotalPaid);
-      //  const totalDue = previousDue + currentDue;
-
-      //  // ✅ Update running totals BEFORE sending
-      //  runningTotalBilled += payment.totalAmount;
-      //  runningTotalPaid += payment.amountPaid;
-
-      //  if (isTodayUnsentBill) {
-      //    const message = buildWhatsAppMessage(
-      //      customer.name,
-      //      payment.items,
-      //      payment.totalAmount,
-      //      payment.amountPaid,
-      //      totalDue,
-      //      customer.nextPaymentDate,
-      //      payment.paymentDate,
-      //      previousDue
-      //    );
-
-      //    try {
-      //      console.log("📤 Sending message to:", customer.phone);
-      //      console.log(message);
-
-      //      await sendWhatsAppMessage(customer.phone, message);
-      //      await sendWhatsAppMessage(process.env.OWNER_PHONE, message);
-
-      //      payment.billStatus = 'sent';
-      //      await payment.save();
-      //    } catch (msgErr) {
-      //      console.error(❌ Message failed for ${customer.name}:, msgErr.message);
-      //      payment.billStatus = 'failed';
-      //      await payment.save();
-      //    }
-      //  }
-      //}
       for (const payment of allPayments) {
-  const isTodayUnsentBill =
-    payment.createdAt >= todayStart &&
-    payment.createdAt <= todayEnd &&
-    payment.billStatus !== 'sent' &&
-    payment.items && payment.items.length > 0;
+        const isTodayUnsentBill =
+          payment.createdAt >= todayStart &&
+          payment.createdAt <= todayEnd &&
+          payment.billStatus !== "sent" &&
+          payment.items &&
+          payment.items.length > 0;
 
-  const previousDue = Math.max(0, runningTotalBilled - runningTotalPaid);
-  const currentDue = payment.totalAmount - payment.amountPaid;
-  const totalDue = previousDue + currentDue;
+        const previousDue = Math.max(0, runningTotalBilled - runningTotalPaid);
+        const currentDue = payment.totalAmount - payment.amountPaid;
+        const totalDue = previousDue + currentDue;
 
-  // 🛠 FIX: Only increase billed if items exist
-  if (payment.items && payment.items.length > 0) {
-    runningTotalBilled += payment.totalAmount;
-  }
+        // 🛠 FIX: Only increase billed if items exist
+        if (payment.items && payment.items.length > 0) {
+          runningTotalBilled += payment.totalAmount;
+        }
 
-  runningTotalPaid += payment.amountPaid;
+        runningTotalPaid += payment.amountPaid;
 
-  if (isTodayUnsentBill) {
-    const message = buildWhatsAppMessage(
-      customer.name,
-      payment.items,
-      payment.totalAmount,
-      payment.amountPaid,
-      totalDue,
-      customer.nextPaymentDate,
-      payment.paymentDate,
-      previousDue
-    );
-   console.log("bill",message);
-    try {
-      await sendWhatsAppMessage(customer.phone, message);
-      await sendWhatsAppMessage(process.env.OWNER_PHONE, message);
-      payment.billStatus = 'sent';
-      await payment.save();
-    } catch (err) {
-      //console.error(❌ Failed for ${customer.name}:, err.message);
-      payment.billStatus = 'failed';
-      await payment.save();
-    }
-  }
-}
-
+        if (isTodayUnsentBill) {
+          const message = buildWhatsAppMessage(
+            customer.name,
+            payment.items,
+            payment.totalAmount,
+            payment.amountPaid,
+            totalDue,
+            customer.nextPaymentDate,
+            payment.paymentDate,
+            previousDue
+          );
+          console.log("bill", message);
+          try {
+            await sendWhatsAppMessage(customer.phone, message);
+            await sendWhatsAppMessage(process.env.OWNER_PHONE, message);
+            payment.billStatus = "sent";
+            await payment.save();
+          } catch (err) {
+            //console.error(❌ Failed for ${customer.name}:, err.message);
+            payment.billStatus = "failed";
+            await payment.save();
+          }
+        }
+      }
 
       // ✅ Mark customer as processed
       customer.isSent = true;
@@ -200,7 +156,7 @@ const { buildWhatsAppMessage } = require("../controllers/customerController");
       await customer.save();
     }
 
-// console.log(✅ "All WhatsApp bills sent at",` ${new Date().toLocaleTimeString()`});
+    // console.log(✅ "All WhatsApp bills sent at",` ${new Date().toLocaleTimeString()`});
   } catch (err) {
     console.error("❌ Error in cron WhatsApp sender:", err);
   }

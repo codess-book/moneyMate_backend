@@ -1,19 +1,10 @@
-
-
 const mongoose = require("mongoose");
-
-// const itemSchema = new mongoose.Schema({
-//   name: String,
-//   quantity: Number,
-//   pricePerUnit: Number,
-//   totalPrice: Number // quantity * pricePerUnit
-// });
 
 const itemSchema = new mongoose.Schema(
   {
     productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" }, // helpful later
     name: { type: String, required: true },
-        category: { type: String, required: true },
+    category: { type: String, required: true },
     quantity: { type: Number, required: true },
     pricePerUnit: { type: Number, required: true },
 
@@ -25,23 +16,31 @@ const itemSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const customerSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    phone: {
+      type: String,
+      required: true,
+      unique: true,
+      match: [/^\d{10}$/, "Please enter a valid 10-digit phone number"],
+    },
+    address: { type: String, default: "" },
+    totalAmount: { type: Number, required: true },
+    paidAmount: { type: Number, required: true },
+    remainingAmount: { type: Number, required: true },
+    nextPaymentDate: { type: Date },
+    addedDate: { type: Date, default: Date.now },
+    items: [itemSchema],
+    isSent: { type: Boolean, default: false },
+    sendTime: { type: Date },
 
-const customerSchema = new mongoose.Schema({
-  name: { type: String, required: true, trim: true },
-  phone: { type: String, required: true, unique: true, 
-     match: [/^\d{10}$/, "Please enter a valid 10-digit phone number"]
+    lastReminderSentAt: {
+      type: Date,
+      default: null,
+    },
   },
-  address: { type: String, default: "" },
-  totalAmount: { type: Number, required: true },
-  paidAmount: { type: Number, required: true },
-  remainingAmount: { type: Number, required: true },
-  nextPaymentDate: { type: Date },
-  addedDate: { type: Date, default: Date.now },
-  items: [itemSchema],
-  isSent: { type: Boolean, default: false },
-sendTime: { type: Date }
-}, { timestamps: true });
-
-
+  { timestamps: true }
+);
 
 module.exports = mongoose.model("Customer", customerSchema);

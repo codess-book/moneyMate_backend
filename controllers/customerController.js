@@ -3,254 +3,65 @@ const { sendWhatsAppMessage } = require("../services/whatsappService");
 const WhatsAppLog = require("../models/WhatsAppLog");
 const Payment = require("../models/payment"); // Import this at the top
 const deductStock = require("../services/inventoryService");
+
 //ye purana hai..
 
-exports.buildWhatsAppMessage = function (
-  name,
-  items,
-  total,
-  paid,
-  remaining,
-  nextDate,
-  billDate,
-  previousDue = 0
-) {
-  const formattedDate = new Date(billDate).toLocaleDateString("hi-IN");
+// exports.buildWhatsAppMessage = function (
+//   name,
+//   items,
+//   total,
+//   paid,
+//   remaining,
+//   nextDate,
+//   billDate,
+//   previousDue = 0
+// ) {
+//   const formattedDate = new Date(billDate).toLocaleDateString("hi-IN");
 
-  const header = `\`\`\`
-Items      Qty   Rate   Total
--------------------------------
-\`\`\``;
+//   const header = `\`\`\`
+// Items      Qty   Rate   Total
+// -------------------------------
+// \`\`\``;
 
-  const itemRows = items
-    .map((item) => {
-      const itemName = item.name.padEnd(16); // 16 chars
-      const qty = String(item.quantity).toString().padStart(3).padEnd(5); // 5 chars
-      const rate = `₹${item.pricePerUnit}`.padStart(5).padEnd(7); // 7 chars
-      const total = `₹${item.totalPrice}`.padStart(7); // 7 chars
-      return `\`\`\`${itemName}${qty}${rate}${total}\`\`\``;
-    })
-    .join("\n");
+//   const itemRows = items
+//     .map((item) => {
+//       const itemName = item.name.padEnd(16); // 16 chars
+//       const qty = String(item.quantity).toString().padStart(3).padEnd(5); // 5 chars
+//       const rate = `₹${item.pricePerUnit}`.padStart(5).padEnd(7); // 7 chars
+//       const total = `₹${item.totalPrice}`.padStart(7); // 7 chars
+//       return `\`\`\`${itemName}${qty}${rate}${total}\`\`\``;
+//     })
+//     .join("\n");
 
-  return `
-🧾  - दिनांक: ${formattedDate}
+//   return `
+// 🧾  - दिनांक: ${formattedDate}
 
-नमस्ते *${name}*, आपका आज का ऑर्डर सफलतापूर्वक दर्ज हो गया है।
+// नमस्ते *${name}*, आपका आज का ऑर्डर सफलतापूर्वक दर्ज हो गया है।
 
-📦 *आइटम विवरण:*                                        
-${header}${itemRows}
+// 📦 *आइटम विवरण:*
+// ${header}${itemRows}
 
+// 🧮 *आज का टोटल*: ₹${total}
+// 💳 *पिछला बकाया*: ₹${previousDue}
+// 💰 *आज का भुगतान*: ₹${paid}
+// 📌 *कुल बकाया*: ₹${remaining}
 
-🧮 *आज का टोटल*: ₹${total}   
-💳 *पिछला बकाया*: ₹${previousDue}                           
-💰 *आज का भुगतान*: ₹${paid}
-📌 *कुल बकाया*: ₹${remaining}
-                                                           
-
-
-🙏 धन्यवाद! फिर से पधारिए 🙏
-`;
-};
-
-// exports.addCustomer = async (req, res) => {
-//   try {
-//     const {
-//       name,
-//       phone,
-//       address,
-//       paidAmount = 0,
-//       nextPaymentDate,
-//       items = [],
-//       paymentDate,
-//     } = req.body;
-
-//     if (!items.length) {
-//       return res.status(400).json({ message: "At least one item is required" });
-//     }
-//     if (!name || !phone) {
-//       return res.status(400).json({ message: "Name and phone are required" });
-//     }
-
-//     // gst logic
-//     const enrichedItems = items.map((item) => {
-//       const quantity = Number(item.quantity);
-//       const pricePerUnit = Number(item.pricePerUnit);
-//       const gstRate = Number(item.gstRate || 0);
-
-//       // Validation
-//       if (quantity <= 0 || pricePerUnit < 0) {
-//         throw new Error("Invalid quantity or price");
-//       }
-//       if (gstRate < 0 || gstRate > 100) {
-//         throw new Error("GST rate must be between 0 and 100");
-//       }
-
-//       const taxableAmount = Math.round(quantity * pricePerUnit * 100) / 100;
-//       const gstAmount =
-//         gstRate > 0 ? Math.round(taxableAmount * gstRate * 100) / 10000 : 0;
-//       const totalAmount = Math.round((taxableAmount + gstAmount) * 100) / 100;
-
-//       return {
-//         ...item,
-//         category: item.category,
-//         quantity,
-//         pricePerUnit,
-//         gstRate,
-//         taxableAmount,
-//         gstAmount,
-//         totalAmount,
-//       };
-//     });
-
-//     const subTotal =
-//       Math.round(
-//         enrichedItems.reduce((sum, item) => sum + item.taxableAmount, 0) * 100
-//       ) / 100;
-
-//     const totalGST =
-//       Math.round(
-//         enrichedItems.reduce((sum, item) => sum + item.gstAmount, 0) * 100
-//       ) / 100;
-
-//     const grandTotal = Math.round((subTotal + totalGST) * 100) / 100;
-
-//     const numericPaidAmount = Math.round(Number(paidAmount) * 100) / 100;
-
-//     if (numericPaidAmount < 0) {
-//       return res
-//         .status(400)
-//         .json({ message: "Paid amount cannot be negative" });
-//     }
-//     if (numericPaidAmount > grandTotal) {
-//       return res
-//         .status(400)
-//         .json({ message: "Paid amount cannot exceed total invoice amount" });
-//     }
-
-//     const dueAmount = Math.round((grandTotal - numericPaidAmount) * 100) / 100;
-
-//     const baseDate = paymentDate ? new Date(paymentDate) : new Date();
-//     const fallbackDate = new Date(baseDate);
-
-//     // Safely add 1 month (handles edge cases like Jan 31)
-//     fallbackDate.setDate(1); // Set to 1st to avoid overflow
-//     fallbackDate.setMonth(fallbackDate.getMonth() + 1);
-//     fallbackDate.setDate(
-//       Math.min(
-//         baseDate.getDate(),
-//         new Date(
-//           fallbackDate.getFullYear(),
-//           fallbackDate.getMonth() + 1,
-//           0
-//         ).getDate()
-//       )
-//     );
-
-//     const finalNextPaymentDate =
-//       dueAmount > 0
-//         ? nextPaymentDate
-//           ? new Date(nextPaymentDate)
-//           : fallbackDate
-//         : null;
-
-//     // if customer already exist
-//     let customer = await Customer.findOne({ phone });
-
-//     if (customer) {
-//       // Update existing customer totals (WITH PROPER ROUNDING)
-//       customer.totalAmount =
-//         Math.round((customer.totalAmount + grandTotal) * 100) / 100;
-//       customer.paidAmount =
-//         Math.round((customer.paidAmount + numericPaidAmount) * 100) / 100;
-//       customer.remainingAmount =
-//         Math.round((customer.totalAmount - customer.paidAmount) * 100) / 100;
-
-//       // FIXED: Use the new nextPaymentDate if there's remaining amount
-//       if (customer.remainingAmount > 0) {
-//         customer.nextPaymentDate = finalNextPaymentDate;
-//       } else {
-//         customer.nextPaymentDate = null;
-//       }
-
-//       customer.isSent = false;
-//       customer.items = [...customer.items, ...enrichedItems];
-
-//       await customer.save();
-
-//       // Create the payment entry
-//       await Payment.create({
-//         userId: customer._id,
-//         subTotal,
-//         totalGST,
-//         grandTotal,
-//         amountPaid: numericPaidAmount,
-//         dueAmount,
-//         paymentDate: baseDate,
-//         nextPaymentDate: finalNextPaymentDate,
-//         status:
-//           dueAmount === 0 ? "paid" : numericPaidAmount > 0 ? "partial" : "due",
-//         items: enrichedItems,
-//       });
-
-//       return res.status(200).json({
-//         message: "Existing customer updated successfully",
-//         customer,
-//       });
-//     }
-
-//     // create new customer
-//     const newCustomer = await Customer.create({
-//       name,
-//       phone,
-//       address,
-//       totalAmount: grandTotal,
-//       paidAmount: numericPaidAmount,
-//       remainingAmount: dueAmount,
-//       nextPaymentDate: finalNextPaymentDate,
-//       isSent: false,
-//       items: enrichedItems,
-//     });
-
-//     await Payment.create({
-//       userId: newCustomer._id,
-//       subTotal,
-//       totalGST,
-//       grandTotal,
-//       amountPaid: numericPaidAmount,
-//       dueAmount,
-//       paymentDate: baseDate,
-//       nextPaymentDate: finalNextPaymentDate,
-//       status:
-//         dueAmount === 0 ? "paid" : numericPaidAmount > 0 ? "partial" : "due",
-//       items: enrichedItems,
-//     });
-//    console.log("Calling deductStock with items:", enrichedItems);
-// try {
-//   await deductStock(enrichedItems);
-//   console.log("deductStock completed");
-// } catch (err) {
-//   console.error("Error in deductStock:", err);
-//   return res.status(400).json({ message: err.message });
-// }
-
-
-//     return res.status(201).json({
-//       message: "Customer added successfully",
-//       customer: newCustomer,
-//     });
-//   } catch (err) {
-//     console.error("❌ Error in addCustomer:", err);
-
-//     // Better error handling
-//     if (err.message.includes("Invalid") || err.message.includes("GST")) {
-//       return res.status(400).json({ message: err.message });
-//     }
-
-//     res.status(500).json({ message: "Server error", error: err.message });
-//   }
+// 🙏 धन्यवाद! फिर से पधारिए 🙏
+// `;
 // };
 
 const Item = require("../models/Item");
+const Invoice = require("../models/invoiveSchema");
+// const customer=require("../models/Customer");
+
+// helper utility
+
+const generateInvoiceNo = () => "INV-" + Date.now();
+
+const generateInvoiceUrl = (invoiceNo) => {
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  return `${frontendUrl}/invoice/${invoiceNo}`;
+};
 
 exports.addCustomer = async (req, res) => {
   try {
@@ -354,7 +165,14 @@ exports.addCustomer = async (req, res) => {
     // Check if customer already exists
     let customer = await Customer.findOne({ phone });
 
+    // new changes for displaying invoice..
+    let customerId;
+    let finalCustomer;
+
     if (customer) {
+      customerId = customer._id;
+      finalCustomer = customer;
+
       // Update existing customer totals (WITH PROPER ROUNDING)
       customer.totalAmount =
         Math.round((customer.totalAmount + grandTotal) * 100) / 100;
@@ -388,68 +206,76 @@ exports.addCustomer = async (req, res) => {
         items: enrichedItems,
       });
 
-      // Deduct stock for each item
-      for (const item of enrichedItems) {
-        console.log(item, "item here")
-        const inv = await Item.findOne({ category: item.category, name: item.name });
-        if (!inv) {
-          throw new Error(`Item not found: ${item.name}`);
-        }
+      //logic  for Deduct stock for each item
+      // for (const item of enrichedItems) {
+      //   // console.log(item, "item here");
+      //   const inv = await Item.findOne({
+      //     category: item.category,
+      //     name: item.name,
+      //   });
+      //   if (!inv) {
+      //     throw new Error(`Item not found: ${item.name}`);
+      //   }
 
-        const requiredQty = Number(item.quantity);
-        const availableQty = Number(inv.currentStock);
+      //   const requiredQty = Number(item.quantity);
+      //   const availableQty = Number(inv.currentStock);
 
-        if (availableQty < requiredQty) {
-          throw new Error(
-            `Low stock for ${inv.name}. Available: ${availableQty}, Required: ${requiredQty}`
-          );
-        }
+      //   if (availableQty < requiredQty) {
+      //     throw new Error(
+      //       `Low stock for ${inv.name}. Available: ${availableQty}, Required: ${requiredQty}`
+      //     );
+      //   }
 
-        inv.currentStock = availableQty - requiredQty;
-        await inv.save();
+      //   inv.currentStock = availableQty - requiredQty;
+      //   await inv.save();
 
-        if (inv.currentStock <= inv.lowStockAlert) {
-          console.log(`⚠️ Low stock alert for ${inv.name}`);
-          // You can trigger notifications here (email, WhatsApp, etc.)
-        }
-      }
+      //   if (inv.currentStock <= inv.lowStockAlert) {
+      //     console.log(`⚠️ Low stock alert for ${inv.name}`);
+      //     // You can trigger notifications here (email, WhatsApp, etc.)
+      //   }
+      // }
 
-      return res.status(200).json({
-        message: "Existing customer updated successfully",
-        customer,
+      // return res.status(200).json({
+      //   message: "Existing customer updated successfully",
+      //   customer,
+      // });
+    } else {
+      //  new customer logic
+      const newCustomer = await Customer.create({
+        name,
+        phone,
+        address,
+        totalAmount: grandTotal,
+        paidAmount: numericPaidAmount,
+        remainingAmount: dueAmount,
+        nextPaymentDate: finalNextPaymentDate,
+        isSent: false,
+        items: enrichedItems,
+      });
+      customerId = newCustomer._id;
+      finalCustomer = newCustomer;
+
+      await Payment.create({
+        userId: newCustomer._id,
+        subTotal,
+        totalGST,
+        grandTotal,
+        amountPaid: numericPaidAmount,
+        dueAmount,
+        paymentDate: baseDate,
+        nextPaymentDate: finalNextPaymentDate,
+        status:
+          dueAmount === 0 ? "paid" : numericPaidAmount > 0 ? "partial" : "due",
+        items: enrichedItems,
       });
     }
 
-    // Create new customer
-    const newCustomer = await Customer.create({
-      name,
-      phone,
-      address,
-      totalAmount: grandTotal,
-      paidAmount: numericPaidAmount,
-      remainingAmount: dueAmount,
-      nextPaymentDate: finalNextPaymentDate,
-      isSent: false,
-      items: enrichedItems,
-    });
-
-    await Payment.create({
-      userId: newCustomer._id,
-      subTotal,
-      totalGST,
-      grandTotal,
-      amountPaid: numericPaidAmount,
-      dueAmount,
-      paymentDate: baseDate,
-      nextPaymentDate: finalNextPaymentDate,
-      status:
-        dueAmount === 0 ? "paid" : numericPaidAmount > 0 ? "partial" : "due",
-      items: enrichedItems,
-    });
-
     // Deduct stock for each item (new customer)
     for (const item of enrichedItems) {
-      const inv = await Item.findOne({ category: item.category, name: item.name });
+      const inv = await Item.findOne({
+        category: item.category,
+        name: item.name,
+      });
       if (!inv) {
         throw new Error(`Item not found: ${item.name}`);
       }
@@ -472,9 +298,68 @@ exports.addCustomer = async (req, res) => {
       }
     }
 
-    return res.status(201).json({
-      message: "Customer added successfully",
-      customer: newCustomer,
+    const invoiceNo = generateInvoiceNo();
+    const invoiceUrl = generateInvoiceUrl(invoiceNo);
+
+    
+    const invoice = await Invoice.create({
+      customerId: customerId,
+      customerName: name,
+      phone:phone,
+      address:address,
+      items: enrichedItems,
+      subTotal,
+      totalGST,
+      grandTotal,
+      paidAmount: numericPaidAmount,
+      dueAmount,
+      nextPaymentDate: finalNextPaymentDate,
+      paymentDate: baseDate,
+      invoiceNo,
+      invoiceUrl,
+      billStatus: "new",
+    });
+
+    
+
+   const message = `
+🧾 Invoice ${invoice.invoiceNo}
+
+Customer: ${name}
+Date: ${new Date(baseDate).toLocaleDateString("hi-IN")}
+
+🛒 Items: ${items.length}
+💰 Total: ₹${grandTotal}
+💵 Paid: ₹${numericPaidAmount}
+⏳ Due: ₹${dueAmount}
+
+💳 Payment Status: ${dueAmount === 0 ? "PAID ✅" : "PARTIAL PAYMENT ⚠️"}
+📅 अगली भुगतान तिथि: ${nextPaymentDate || "—"}
+
+📄 पूरा बिल देखें:
+${invoice.invoiceUrl}
+
+📞 सहायता के लिए: 7000315367
+
+🌾 आर्या कृषि सेवा केंद्र – हमेशा आपकी सेवा में
+🤝 समय पर भुगतान से हमारा विश्वास और मजबूत होता है
+
+🙏 धन्यवाद!
+`;
+
+
+    // Send WhatsApp message
+    await sendWhatsAppMessage(phone, message);
+    if (process.env.OWNER_PHONE) {
+      await sendWhatsAppMessage(process.env.OWNER_PHONE, message);
+    }
+
+    return res.status(customer ? 200 : 201).json({
+      message: customer
+        ? "Existing customer updated successfully"
+        : "Customer added successfully",
+      customer: finalCustomer,
+      invoice,
     });
   } catch (err) {
     console.error("❌ Error in addCustomer:", err);
@@ -486,7 +371,6 @@ exports.addCustomer = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
-
 
 exports.getCustomerByPhone = async (req, res) => {
   try {
@@ -589,9 +473,7 @@ exports.deleteCustomer = async (req, res) => {
 };
 
 exports.updateCustomer = async (req, res) => {
-  console.log("🔥 HIT updateCustomer route");
-  console.log("🆔 ID received:", req.params.id);
-  console.log(req.id);
+  // console.log(req.id);
   try {
     const { id } = req.params;
     const { name, phone, address } = req.body;
@@ -622,24 +504,26 @@ exports.sendReminder = async (req, res) => {
     if (!customer)
       return res.status(404).json({ message: "Customer not found" });
 
-    // ✅ Common Message Format
-    const message = `📢 Dear ${customer.name}, your payment of ₹${customer.totalAmount - customer.paidAmount
-      } is still pending. Please pay soon.
+    // Common Message Format
+    const message = `📢 Dear ${customer.name}, your payment of ₹${
+      customer.totalAmount - customer.paidAmount
+    } is still pending. Please pay soon.
     
-    प्रिय ${customer.name}, आपका ₹${customer.totalAmount - customer.paidAmount
-      } का भुगतान अभी बाकी है। कृपया जल्द भुगतान करें।
+    प्रिय ${customer.name}, आपका ₹${
+      customer.totalAmount - customer.paidAmount
+    } का भुगतान अभी बाकी है। कृपया जल्द भुगतान करें।
 
 🙏 धन्यवाद!
     `;
 
-    // ✅ Send to Customer
+    // Send to Customer
     await sendWhatsAppMessage(`+91${customer.phone}`, message);
+    // Owner Message Format
+    const ownerMessage = `📬 Reminder sent to ${customer.name} (${
+      customer.phone
+    }) for pending amount ₹${customer.totalAmount - customer.paidAmount}.`;
 
-    // ✅ Owner Message Format
-    const ownerMessage = `📬 Reminder sent to ${customer.name} (${customer.phone
-      }) for pending amount ₹${customer.totalAmount - customer.paidAmount}.`;
-
-    // ✅ Send to Owner
+    // Send to Owner
     await sendWhatsAppMessage(process.env.OWNER_PHONE, ownerMessage);
 
     res.status(200).json({ message: "Reminder sent!" });
