@@ -284,9 +284,14 @@ exports.addCustomer = async (req, res) => {
       const availableQty = Number(inv.currentStock);
 
       if (availableQty < requiredQty) {
-        throw new Error(
-          `Low stock for ${inv.name}. Available: ${availableQty}, Required: ${requiredQty}`
-        );
+        return res.status(400).json({
+          success: false,
+          code: "LOW_STOCK",
+          productName: inv.name,
+          availableQty,
+          requiredQty,
+          message: `  Low STOCK ,Only ${availableQty} quantity available for ${inv.name}`,
+        });
       }
 
       inv.currentStock = availableQty - requiredQty;
@@ -301,12 +306,11 @@ exports.addCustomer = async (req, res) => {
     const invoiceNo = generateInvoiceNo();
     const invoiceUrl = generateInvoiceUrl(invoiceNo);
 
-    
     const invoice = await Invoice.create({
       customerId: customerId,
       customerName: name,
-      phone:phone,
-      address:address,
+      phone: phone,
+      address: address,
       items: enrichedItems,
       subTotal,
       totalGST,
@@ -320,9 +324,7 @@ exports.addCustomer = async (req, res) => {
       billStatus: "new",
     });
 
-    
-
-   const message = `
+    const message = `
 🧾 Invoice ${invoice.invoiceNo}
 
 Customer: ${name}
@@ -346,7 +348,6 @@ ${invoice.invoiceUrl}
 
 🙏 धन्यवाद!
 `;
-
 
     // Send WhatsApp message
     await sendWhatsAppMessage(phone, message);

@@ -3,7 +3,6 @@ const Item = require("../models/Item");
 
 //  Get all inventory items
 
-
 exports.getAllItems = async (req, res) => {
   // console.log("idr")
   try {
@@ -76,30 +75,36 @@ exports.getAllItems = async (req, res) => {
     res.status(500).json({ message: "Error fetching items", error });
   }
 };
-   
+
 exports.addItem = async (req, res) => {
   try {
-    const { name, category, price, unit, quantity, lowStockAlert, supplier } = req.body;
+    const { name, category, price, unit, quantity, lowStockAlert, supplier } =
+      req.body;
 
     const existingItem = await Item.findOne({ name });
     if (existingItem) {
       return res.status(400).json({
-        message: "Item already exists. Please use update instead."
+        success: false,
+        message: "Item already exists. Please use update instead.",
       });
     }
 
-    console.log(supplier,"supller")
+    // console.log(supplier, "supller");
 
     const supplierData = supplier?.name
-      ? [{
-          supplierName: supplier.name,
-          supplierPhone: supplier.phone,
-          supplierAddress: supplier.address,
-          purchaseHistory: [{
-            boughtPrice: supplier.boughtPrice,
-            quantityAdded: quantity,
-          }]
-        }]
+      ? [
+          {
+            supplierName: supplier.name,
+            supplierPhone: supplier.phone,
+            supplierAddress: supplier.address,
+            purchaseHistory: [
+              {
+                boughtPrice: supplier.boughtPrice,
+                quantityAdded: quantity,
+              },
+            ],
+          },
+        ]
       : [];
 
     const newItem = await Item.create({
@@ -109,20 +114,18 @@ exports.addItem = async (req, res) => {
       unit,
       currentStock: quantity,
       lowStockAlert,
-      suppliers: supplierData
+      suppliers: supplierData,
     });
 
     return res.status(201).json({
       message: "Item created successfully",
-      data: newItem
+      data: newItem,
     });
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error adding item", error });
   }
 };
-
 
 exports.updateItem = async (req, res) => {
   try {
@@ -135,7 +138,8 @@ exports.updateItem = async (req, res) => {
     // Basic field updates
     if (updates.price !== undefined) item.price = updates.price;
     if (updates.status !== undefined) item.status = updates.status;
-    if (updates.stockAlert !== undefined) item.lowStockAlert = updates.stockAlert;
+    if (updates.stockAlert !== undefined)
+      item.lowStockAlert = updates.stockAlert;
 
     const supplier = updates.supplier;
 
@@ -149,41 +153,41 @@ exports.updateItem = async (req, res) => {
 
       if (existingSupplier) {
         // 2️⃣ Update supplier profile
-        existingSupplier.supplierName = supplier.name || existingSupplier.supplierName;
-        existingSupplier.supplierPhone = supplier.phone || existingSupplier.supplierPhone;
-        existingSupplier.supplierAddress = supplier.address || existingSupplier.supplierAddress;
+        existingSupplier.supplierName =
+          supplier.name || existingSupplier.supplierName;
+        existingSupplier.supplierPhone =
+          supplier.phone || existingSupplier.supplierPhone;
+        existingSupplier.supplierAddress =
+          supplier.address || existingSupplier.supplierAddress;
 
         // 3️⃣ Push new purchase record
         existingSupplier.purchaseHistory.push({
           boughtPrice: supplier.boughtPrice,
-          quantityAdded: supplier.quantityAdded
+          quantityAdded: supplier.quantityAdded,
         });
-
       } else {
         // 4️⃣ Add new supplier if not present
         item.suppliers.push({
           supplierName: supplier.name,
           supplierPhone: supplier.phone,
           supplierAddress: supplier.address,
-          purchaseHistory: [{
-            boughtPrice: supplier.boughtPrice,
-            quantityAdded: supplier.quantityAdded
-          }]
+          purchaseHistory: [
+            {
+              boughtPrice: supplier.boughtPrice,
+              quantityAdded: supplier.quantityAdded,
+            },
+          ],
         });
       }
     }
 
     await item.save();
     res.status(200).json(item);
-
   } catch (error) {
     console.error(error);
     res.status(400).json({ message: "Error updating item", error });
   }
 };
-
-
-
 
 //  Delete item
 exports.deleteItem = async (req, res) => {
@@ -196,7 +200,6 @@ exports.deleteItem = async (req, res) => {
   }
 };
 
-
 exports.getSupplierHistory = async (req, res) => {
   try {
     const { itemId } = req.params;
@@ -208,13 +211,10 @@ exports.getSupplierHistory = async (req, res) => {
     }
 
     res.status(200).json(item.supplierHistory);
-
   } catch (error) {
     res.status(500).json({ message: "Error fetching supplier history", error });
   }
 };
-
-
 
 // GET SUPPLIER HISTORY OF A SPECIFIC ITEM BY PHONE NUMBER
 exports.getSupplierByPhone = async (req, res) => {
@@ -228,9 +228,7 @@ exports.getSupplierByPhone = async (req, res) => {
     }
 
     // Find supplier having the phone number
-    const supplier = item.suppliers.find(
-      (s) => s.supplierPhone === phone
-    );
+    const supplier = item.suppliers.find((s) => s.supplierPhone === phone);
 
     if (!supplier) {
       return res.status(404).json({
@@ -243,9 +241,7 @@ exports.getSupplierByPhone = async (req, res) => {
       phone,
       supplier,
     });
-
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
-
