@@ -1,5 +1,6 @@
 const Inventory = require("../models/Inventory");
 const Item = require("../models/Item");
+const { default: Notification } = require("../models/Notification");
 
 //  Get all inventory items
 
@@ -76,7 +77,7 @@ exports.getAllItems = async (req, res) => {
     res.status(500).json({ message: "Error fetching items", error });
   }
 };
-   
+
 exports.addItem = async (req, res) => {
   try {
     const { name, category, price, unit, quantity, lowStockAlert, supplier } = req.body;
@@ -88,18 +89,17 @@ exports.addItem = async (req, res) => {
       });
     }
 
-    console.log(supplier,"supller")
 
     const supplierData = supplier?.name
       ? [{
-          supplierName: supplier.name,
-          supplierPhone: supplier.phone,
-          supplierAddress: supplier.address,
-          purchaseHistory: [{
-            boughtPrice: supplier.boughtPrice,
-            quantityAdded: quantity,
-          }]
+        supplierName: supplier.name,
+        supplierPhone: supplier.phone,
+        supplierAddress: supplier.address,
+        purchaseHistory: [{
+          boughtPrice: supplier.boughtPrice,
+          quantityAdded: quantity,
         }]
+      }]
       : [];
 
     const newItem = await Item.create({
@@ -111,6 +111,51 @@ exports.addItem = async (req, res) => {
       lowStockAlert,
       suppliers: supplierData
     });
+
+    // if (
+    //   lowStockAlert > 0 &&
+    //   quantity <= lowStockAlert
+    // ) {
+    //   // Store notification in DB
+    //   const notification = new Notification({
+    //     itemId: newItem._id,
+    //     name: newItem.name,
+    //     message: `Low stock alert for ${newItem.name}`,
+    //     currentStock: newItem.currentStock,
+    //     lowStockAlert: newItem.lowStockAlert,
+    //     category: newItem.category,
+    //   });
+
+    //   await notification.save();
+    //   global.io.emit("low-stock-alert", {
+    //     itemId: newItem._id,
+    //     name: newItem.name,
+    //     currentStock: newItem.currentStock,
+    //     lowStockAlert: newItem.lowStockAlert,
+    //     category: newItem.category,
+    //     time: new Date(),
+    //     source: "item-created",
+    //   });
+    // }
+
+    if (lowStockAlert > 0 && quantity <= lowStockAlert) {
+      const notification = new Notification({
+        itemId: newItem._id,
+        name: newItem.name,
+        message: `Low stock alert for ${newItem.name}`,
+        currentStock: newItem.currentStock,
+        lowStockAlert: newItem.lowStockAlert,
+        category: newItem.category,
+        read: false,
+        source: "item-created",
+      });
+
+      const savedNotification = await notification.save();
+
+      // ✅ Emit DB-saved notification (contains _id)
+      global.io.emit("low-stock-alert", savedNotification);
+    }
+
 
     return res.status(201).json({
       message: "Item created successfully",
@@ -172,6 +217,44 @@ exports.updateItem = async (req, res) => {
         });
       }
     }
+
+    // if (item.currentStock <= item.lowStockAlert) {
+    //    const notification = new Notification({
+    //     itemId: item._id,
+    //     name: item.name,
+    //     message: `Low stock alert for ${item.name}`,
+    //     currentStock: item.currentStock,
+    //     lowStockAlert: item.lowStockAlert,
+    //     category: item.category,
+    //   });
+    //   await notification.save();
+    //   global.io.emit("low-stock-alert", {
+    //     itemId: item._id,
+    //     name: item.name,
+    //     currentStock: item.currentStock,
+    //     lowStockAlert: item.lowStockAlert,
+    //     category: item.category,
+    //     time: new Date(),
+    //   });
+    // }
+
+    if (item.currentStock <= item.lowStockAlert) {
+      const notification = new Notification({
+        itemId: item._id,
+        name: item.name,
+        message: `Low stock alert for ${item.name}`,
+        currentStock: item.currentStock,
+        lowStockAlert: item.lowStockAlert,
+        category: item.category,
+        read: false,
+      });
+
+      const savedNotification = await notification.save();
+
+      // ✅ Emit the FULL saved document (includes _id)
+      global.io.emit("low-stock-alert", savedNotification);
+    }
+
 
     await item.save();
     res.status(200).json(item);
