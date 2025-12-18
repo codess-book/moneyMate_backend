@@ -52,6 +52,7 @@ const deductStock = require("../services/inventoryService");
 
 const Item = require("../models/Item");
 const Invoice = require("../models/invoiveSchema");
+const { default: Notification } = require("../models/Notification");
 // const customer=require("../models/Customer");
 
 // helper utility
@@ -293,9 +294,58 @@ exports.addCustomer = async (req, res) => {
           message: `  Low STOCK ,Only ${availableQty} quantity available for ${inv.name}`,
         });
       }
+      const previousStock = inv.currentStock;
 
       inv.currentStock = availableQty - requiredQty;
       await inv.save();
+
+      // if (
+      //   previousStock > inv.lowStockAlert &&
+      //   inv.currentStock <= inv.lowStockAlert
+      // ) {
+      //   // Save notification in DB
+      //   const notification = new Notification({
+      //     itemId: inv._id,
+      //     name: inv.name,
+      //     message: `Low stock alert for ${inv.name}`,
+      //     currentStock: inv.currentStock,
+      //     lowStockAlert: inv.lowStockAlert,
+      //     category: inv.category,
+      //     triggeredBy: "sale",
+      //   });
+      //   await notification.save();
+      //   global.io.emit("low-stock-alert", {
+      //     itemId: inv._id,
+      //     name: inv.name,
+      //     category: inv.category,
+      //     currentStock: inv.currentStock,
+      //     lowStockAlert: inv.lowStockAlert,
+      //     triggeredBy: "sale",
+      //     time: new Date(),
+      //   });
+      // }
+
+      if (
+        previousStock > inv.lowStockAlert &&
+        inv.currentStock <= inv.lowStockAlert
+      ) {
+        const notification = new Notification({
+          itemId: inv._id,
+          name: inv.name,
+          message: `Low stock alert for ${inv.name}`,
+          currentStock: inv.currentStock,
+          lowStockAlert: inv.lowStockAlert,
+          category: inv.category,
+          triggeredBy: "sale",
+          read: false,
+        });
+
+        const savedNotification = await notification.save();
+
+        // ✅ Emit DB-saved notification
+        global.io.emit("low-stock-alert", savedNotification);
+      }
+
 
       if (inv.currentStock <= inv.lowStockAlert) {
         console.log(`⚠️ Low stock alert for ${inv.name}`);
@@ -309,6 +359,8 @@ exports.addCustomer = async (req, res) => {
     const invoice = await Invoice.create({
       customerId: customerId,
       customerName: name,
+      phone: phone,
+      address: address,
       phone: phone,
       address: address,
       items: enrichedItems,
@@ -506,13 +558,11 @@ exports.sendReminder = async (req, res) => {
       return res.status(404).json({ message: "Customer not found" });
 
     // Common Message Format
-    const message = `📢 Dear ${customer.name}, your payment of ₹${
-      customer.totalAmount - customer.paidAmount
-    } is still pending. Please pay soon.
+    const message = `📢 Dear ${customer.name}, your payment of ₹${customer.totalAmount - customer.paidAmount
+      } is still pending. Please pay soon.
     
-    प्रिय ${customer.name}, आपका ₹${
-      customer.totalAmount - customer.paidAmount
-    } का भुगतान अभी बाकी है। कृपया जल्द भुगतान करें।
+    प्रिय ${customer.name}, आपका ₹${customer.totalAmount - customer.paidAmount
+      } का भुगतान अभी बाकी है। कृपया जल्द भुगतान करें।
 
 🙏 धन्यवाद!
     `;
@@ -520,9 +570,8 @@ exports.sendReminder = async (req, res) => {
     // Send to Customer
     await sendWhatsAppMessage(`+91${customer.phone}`, message);
     // Owner Message Format
-    const ownerMessage = `📬 Reminder sent to ${customer.name} (${
-      customer.phone
-    }) for pending amount ₹${customer.totalAmount - customer.paidAmount}.`;
+    const ownerMessage = `📬 Reminder sent to ${customer.name} (${customer.phone
+      }) for pending amount ₹${customer.totalAmount - customer.paidAmount}.`;
 
     // Send to Owner
     await sendWhatsAppMessage(process.env.OWNER_PHONE, ownerMessage);
