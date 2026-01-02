@@ -3,10 +3,18 @@ const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 
 
-dotenv.config({ path: ".env.development" });
+// dotenv.config({ path: ".env.development" });
+// Load env based on NODE_ENV
+const envFile =
+  process.env.NODE_ENV === "production"
+    ? ".env.production"
+    : ".env.development";
+
+dotenv.config({ path: envFile });
 
 
-dotenv.config();
+
+// dotenv.config();
 
 const connectDB = async () => {
   try {
