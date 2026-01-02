@@ -1,4 +1,5 @@
-import mongoose from "mongoose";
+
+const mongoose=require("mongoose");
 
 const notificationSchema = new mongoose.Schema({
   itemId: {
@@ -28,6 +29,5 @@ const notificationSchema = new mongoose.Schema({
   },
 });
 
-const Notification = mongoose.model("Notification", notificationSchema);
+module.exports = mongoose.model("Notification", notificationSchema);
 
-export default Notification;

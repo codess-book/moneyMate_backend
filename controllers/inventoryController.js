@@ -80,8 +80,11 @@ exports.getAllItems = async (req, res) => {
 
 exports.addItem = async (req, res) => {
   try {
-    const { name, category, price, unit, quantity, lowStockAlert, supplier } =
+    const { name, category, price, unit, quantity, lowStockAlert,Note, supplier } =
       req.body;
+
+      console.log(req.body,"req");
+
 
     const existingItem = await Item.findOne({ name });
     if (existingItem) {
@@ -115,6 +118,7 @@ exports.addItem = async (req, res) => {
       unit,
       currentStock: quantity,
       lowStockAlert,
+      Note,
       suppliers: supplierData,
     });
 
@@ -162,11 +166,12 @@ exports.addItem = async (req, res) => {
       global.io.emit("low-stock-alert", savedNotification);
     }
 
-
+   console.log("data",newItem);
     return res.status(201).json({
       message: "Item created successfully",
       data: newItem,
     });
+ 
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error adding item", error });
@@ -186,6 +191,8 @@ exports.updateItem = async (req, res) => {
     if (updates.status !== undefined) item.status = updates.status;
     if (updates.stockAlert !== undefined)
       item.lowStockAlert = updates.stockAlert;
+
+    if(updates.Note !== undefined) item.Note =updates.Note ;
 
     const supplier = updates.supplier;
 

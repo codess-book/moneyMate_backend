@@ -1,7 +1,7 @@
-import Notification from "../models/Notification.js";
 
+const Notification=require("../models/Notification.js");
 // Create a new notification
-export const createNotification = async (req, res) => {
+exports.createNotification = async (req, res) => {
   try {
     const { itemId, name, message, currentStock, lowStockAlert } = req.body;
 
@@ -23,7 +23,7 @@ export const createNotification = async (req, res) => {
 };
 
 // Get all notifications (sorted by newest first)
-export const getNotifications = async (req, res) => {
+exports.getNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find()
       .sort({ createdAt: -1 });
@@ -35,10 +35,10 @@ export const getNotifications = async (req, res) => {
 };
 
 // Mark notification as read
-export const markAsRead = async (req, res) => {
+exports.markAsRead = async (req, res) => {
   try {
     const { id } = req.params;
-
+console.log('id',id);
     const notification = await Notification.findById(id);
     if (!notification) return res.status(404).json({ message: "Notification not found" });
 
@@ -53,7 +53,7 @@ export const markAsRead = async (req, res) => {
 };
 
 // Delete notification (ignore)
-export const deleteNotification = async (req, res) => {
+exports.deleteNotification = async (req, res) => {
   try {
     const { id } = req.params;
 

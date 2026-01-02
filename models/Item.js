@@ -43,7 +43,7 @@ const itemSchema = new mongoose.Schema(
     currentStock: { type: Number, default: 0 },
 
     lowStockAlert: { type: Number, default: 0},
-
+    Note:{type:String , required:false},
     status: {
       type: String,
       enum: ["active", "inactive"],

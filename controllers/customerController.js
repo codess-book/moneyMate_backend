@@ -3,58 +3,11 @@ const { sendWhatsAppMessage } = require("../services/whatsappService");
 const WhatsAppLog = require("../models/WhatsAppLog");
 const Payment = require("../models/payment"); // Import this at the top
 const deductStock = require("../services/inventoryService");
-
-//ye purana hai..
-
-// exports.buildWhatsAppMessage = function (
-//   name,
-//   items,
-//   total,
-//   paid,
-//   remaining,
-//   nextDate,
-//   billDate,
-//   previousDue = 0
-// ) {
-//   const formattedDate = new Date(billDate).toLocaleDateString("hi-IN");
-
-//   const header = `\`\`\`
-// Items      Qty   Rate   Total
-// -------------------------------
-// \`\`\``;
-
-//   const itemRows = items
-//     .map((item) => {
-//       const itemName = item.name.padEnd(16); // 16 chars
-//       const qty = String(item.quantity).toString().padStart(3).padEnd(5); // 5 chars
-//       const rate = `₹${item.pricePerUnit}`.padStart(5).padEnd(7); // 7 chars
-//       const total = `₹${item.totalPrice}`.padStart(7); // 7 chars
-//       return `\`\`\`${itemName}${qty}${rate}${total}\`\`\``;
-//     })
-//     .join("\n");
-
-//   return `
-// 🧾  - दिनांक: ${formattedDate}
-
-// नमस्ते *${name}*, आपका आज का ऑर्डर सफलतापूर्वक दर्ज हो गया है।
-
-// 📦 *आइटम विवरण:*
-// ${header}${itemRows}
-
-// 🧮 *आज का टोटल*: ₹${total}
-// 💳 *पिछला बकाया*: ₹${previousDue}
-// 💰 *आज का भुगतान*: ₹${paid}
-// 📌 *कुल बकाया*: ₹${remaining}
-
-// 🙏 धन्यवाद! फिर से पधारिए 🙏
-// `;
-// };
-
 const Item = require("../models/Item");
 const Invoice = require("../models/invoiveSchema");
-const { default: Notification } = require("../models/Notification");
+const Notification = require("../models/Notification");
 // const customer=require("../models/Customer");
-
+console.log("Notification model 👉", Notification);
 // helper utility
 
 const generateInvoiceNo = () => "INV-" + Date.now();
@@ -111,6 +64,33 @@ exports.addCustomer = async (req, res) => {
         totalAmount,
       };
     });
+
+    for (const item of enrichedItems) {
+      const inv = await Item.findOne({
+        category: item.category,
+        name: item.name,
+      });
+
+      if (!inv) {
+        return res.status(400).json({
+          success: false,
+          message: `item not found : ${item.name}`,
+        });
+      }
+
+      const requiredQty = Number(item.quantity);
+      const availableQty = Number(inv.currentStock);
+      if (availableQty < requiredQty) {
+        return res.status(400).json({
+          success: false,
+          code: "LOW_STOCK",
+          productName: inv.name,
+          availableQty,
+          requiredQty,
+          message: `Low stock. Only ${availableQty} available for ${inv.name}`,
+        });
+      }
+    }
 
     const subTotal =
       Math.round(
@@ -206,40 +186,6 @@ exports.addCustomer = async (req, res) => {
           dueAmount === 0 ? "paid" : numericPaidAmount > 0 ? "partial" : "due",
         items: enrichedItems,
       });
-
-      //logic  for Deduct stock for each item
-      // for (const item of enrichedItems) {
-      //   // console.log(item, "item here");
-      //   const inv = await Item.findOne({
-      //     category: item.category,
-      //     name: item.name,
-      //   });
-      //   if (!inv) {
-      //     throw new Error(`Item not found: ${item.name}`);
-      //   }
-
-      //   const requiredQty = Number(item.quantity);
-      //   const availableQty = Number(inv.currentStock);
-
-      //   if (availableQty < requiredQty) {
-      //     throw new Error(
-      //       `Low stock for ${inv.name}. Available: ${availableQty}, Required: ${requiredQty}`
-      //     );
-      //   }
-
-      //   inv.currentStock = availableQty - requiredQty;
-      //   await inv.save();
-
-      //   if (inv.currentStock <= inv.lowStockAlert) {
-      //     console.log(`⚠️ Low stock alert for ${inv.name}`);
-      //     // You can trigger notifications here (email, WhatsApp, etc.)
-      //   }
-      // }
-
-      // return res.status(200).json({
-      //   message: "Existing customer updated successfully",
-      //   customer,
-      // });
     } else {
       //  new customer logic
       const newCustomer = await Customer.create({
@@ -277,81 +223,48 @@ exports.addCustomer = async (req, res) => {
         category: item.category,
         name: item.name,
       });
+
       if (!inv) {
-        throw new Error(`Item not found: ${item.name}`);
+        // This shouldn't happen since we checked earlier
+        console.error(`Item not found: ${item.name}`);
+        continue;
       }
 
       const requiredQty = Number(item.quantity);
       const availableQty = Number(inv.currentStock);
+      const previousStock = availableQty;
 
-      if (availableQty < requiredQty) {
-        return res.status(400).json({
-          success: false,
-          code: "LOW_STOCK",
-          productName: inv.name,
-          availableQty,
-          requiredQty,
-          message: `  Low STOCK ,Only ${availableQty} quantity available for ${inv.name}`,
-        });
-      }
-      const previousStock = inv.currentStock;
-
+      // Deduct stock
       inv.currentStock = availableQty - requiredQty;
       await inv.save();
 
-      // if (
-      //   previousStock > inv.lowStockAlert &&
-      //   inv.currentStock <= inv.lowStockAlert
-      // ) {
-      //   // Save notification in DB
-      //   const notification = new Notification({
-      //     itemId: inv._id,
-      //     name: inv.name,
-      //     message: `Low stock alert for ${inv.name}`,
-      //     currentStock: inv.currentStock,
-      //     lowStockAlert: inv.lowStockAlert,
-      //     category: inv.category,
-      //     triggeredBy: "sale",
-      //   });
-      //   await notification.save();
-      //   global.io.emit("low-stock-alert", {
-      //     itemId: inv._id,
-      //     name: inv.name,
-      //     category: inv.category,
-      //     currentStock: inv.currentStock,
-      //     lowStockAlert: inv.lowStockAlert,
-      //     triggeredBy: "sale",
-      //     time: new Date(),
-      //   });
-      // }
-
+      // Check for low stock alert
       if (
         previousStock > inv.lowStockAlert &&
         inv.currentStock <= inv.lowStockAlert
       ) {
-        const notification = new Notification({
+        const savedNotification = await Notification.create({
           itemId: inv._id,
           name: inv.name,
-          message: `Low stock alert for ${inv.name}`,
+          message: `Low stock alert for ${item.name}`,
           currentStock: inv.currentStock,
           lowStockAlert: inv.lowStockAlert,
-          category: inv.category,
+          category: item.category,
           triggeredBy: "sale",
-          read: false,
+          isRead: false,
         });
 
-        const savedNotification = await notification.save();
-
-        // ✅ Emit DB-saved notification
-        global.io.emit("low-stock-alert", savedNotification);
-      }
-
-
-      if (inv.currentStock <= inv.lowStockAlert) {
-        console.log(`⚠️ Low stock alert for ${inv.name}`);
-        // You can trigger notifications here (email, WhatsApp, etc.)
+        // Emit real-time notification
+        if (global.io) {
+          global.io.emit("low-stock-alert", savedNotification);
+        }
       }
     }
+
+    // if (inv.currentStock <= inv.lowStockAlert) {
+    //   // console.log(`⚠️ Low stock alert for ${inv.name}`);
+    //   // You can trigger notifications here (email, WhatsApp, etc.)
+    // }
 
     const invoiceNo = generateInvoiceNo();
     const invoiceUrl = generateInvoiceUrl(invoiceNo);
@@ -359,8 +272,7 @@ exports.addCustomer = async (req, res) => {
     const invoice = await Invoice.create({
       customerId: customerId,
       customerName: name,
-      phone: phone,
-      address: address,
+
       phone: phone,
       address: address,
       items: enrichedItems,
@@ -403,6 +315,8 @@ ${invoice.invoiceUrl}
 
     // Send WhatsApp message
     await sendWhatsAppMessage(phone, message);
+
+    // optional if we need to send message to owner also
     if (process.env.OWNER_PHONE) {
       await sendWhatsAppMessage(process.env.OWNER_PHONE, message);
     }
@@ -558,11 +472,13 @@ exports.sendReminder = async (req, res) => {
       return res.status(404).json({ message: "Customer not found" });
 
     // Common Message Format
-    const message = `📢 Dear ${customer.name}, your payment of ₹${customer.totalAmount - customer.paidAmount
-      } is still pending. Please pay soon.
+    const message = `📢 Dear ${customer.name}, your payment of ₹${
+      customer.totalAmount - customer.paidAmount
+    } is still pending. Please pay soon.
     
-    प्रिय ${customer.name}, आपका ₹${customer.totalAmount - customer.paidAmount
-      } का भुगतान अभी बाकी है। कृपया जल्द भुगतान करें।
+    प्रिय ${customer.name}, आपका ₹${
+      customer.totalAmount - customer.paidAmount
+    } का भुगतान अभी बाकी है। कृपया जल्द भुगतान करें।
 
 🙏 धन्यवाद!
     `;
@@ -570,8 +486,9 @@ exports.sendReminder = async (req, res) => {
     // Send to Customer
     await sendWhatsAppMessage(`+91${customer.phone}`, message);
     // Owner Message Format
-    const ownerMessage = `📬 Reminder sent to ${customer.name} (${customer.phone
-      }) for pending amount ₹${customer.totalAmount - customer.paidAmount}.`;
+    const ownerMessage = `📬 Reminder sent to ${customer.name} (${
+      customer.phone
+    }) for pending amount ₹${customer.totalAmount - customer.paidAmount}.`;
 
     // Send to Owner
     await sendWhatsAppMessage(process.env.OWNER_PHONE, ownerMessage);

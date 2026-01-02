@@ -1,4 +1,6 @@
 
+// ye extra type hai hum isko khi bhi use nhi kr rha hai..
+
 const mongoose = require("mongoose");
 
 const supplierSubSchema = new mongoose.Schema(
@@ -31,6 +33,11 @@ const inventorySchema = new mongoose.Schema(
     price: {
       type: Number,
       required: true,
+    },
+
+    Note:{
+      type:String,
+      required:false,
     },
     suppliers: [supplierSubSchema], // <-- Add this
   },
