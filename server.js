@@ -50,6 +50,7 @@ io.on("connection", (socket) => {
 
 const allowedOrigins = [
   process.env.FRONTEND_URL?.trim(),
+  "https://moneymate-backend-3.onrender.com",
   "http://localhost:5173",
 ];
 
